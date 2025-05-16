@@ -31,6 +31,7 @@ class GamePaperScissorsRock(Game):
     MAX_ROUNDS = 99
     GAME_TYPE = "rps"
     SCORE_MANAGER_TYPE = "standard"
+    MOVE_TIME_LIMIT = 10  # Time limit in seconds for each move
 
     @classmethod
     def register(cls):
@@ -88,9 +89,30 @@ class GamePaperScissorsRock(Game):
         """
         for round_number in range(1, int(rounds_in_game) + 1):
             self.output_provider.output_round_number(round_number, rounds_in_game)
+            
+            # Get moves from players with time limit
             player_1_move = player_1.make_move()
             player_2_move = player_2.make_move()
+            
+            # Handle timeout cases
+            if player_1_move is None and player_2_move is None:
+                # Both players timed out, round is a draw
+                print("\nBoth players took too long to respond. Round is a draw!")
+                continue
+            elif player_1_move is None:
+                # Player 1 timed out, Player 2 wins
+                print(f"\n{player_1.get_name()} took too long to respond. {player_2.get_name()} wins this round!")
+                score_manager.update_scores_for_round(-1)  # Player 2 wins
+                score_manager.return_leaderboard()
+                continue
+            elif player_2_move is None:
+                # Player 2 timed out, Player 1 wins
+                print(f"\n{player_2.get_name()} took too long to respond. {player_1.get_name()} wins this round!")
+                score_manager.update_scores_for_round(1)  # Player 1 wins
+                score_manager.return_leaderboard()
+                continue
 
+            # Normal case - both players made valid moves
             self.output_provider.output_round_moves(player_1, player_2, player_1_move, player_2_move)
             
             # Use the rules object for interaction description

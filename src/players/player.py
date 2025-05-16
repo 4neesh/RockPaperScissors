@@ -7,9 +7,11 @@ class Player(ABC):
     common functionality like player name and move validation.
     """
     MAX_NAME_LENGTH = 20
+    DEFAULT_TIME_LIMIT = 10  # Default time limit in seconds for making a move
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, time_limit: int = DEFAULT_TIME_LIMIT):
         self.name = name
+        self.time_limit = time_limit
 
     def get_name(self):
         return self.name
