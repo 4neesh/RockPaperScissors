@@ -32,6 +32,7 @@ class GamePaperScissorsRock(Game):
     GAME_TYPE = "rps"
     SCORE_MANAGER_TYPE = "standard"
     MOVE_TIME_LIMIT = 10  # Time limit in seconds for each move
+    BEST_OF_5 = 5  # Constant for Best of 5 mode
 
     @classmethod
     def register(cls):
@@ -70,12 +71,102 @@ class GamePaperScissorsRock(Game):
         """
         replay = "y"
         while replay.lower() == "y":
-            rounds_to_play = self.request_rounds_to_play()
-            self.play_rounds(rounds_to_play, players[0], players[1], score_manager)
+            game_option = self.request_game_option()
+            
+            if game_option == "bo5":
+                # Best of 5 mode
+                self.play_best_of_5(players[0], players[1], score_manager)
+            else:
+                # Standard mode
+                rounds_to_play = int(game_option)
+                self.play_rounds(rounds_to_play, players[0], players[1], score_manager)
             
             score_manager.return_game_result()
             replay = self.input_provider.play_again_request()
         self.exit_game()
+
+    def play_best_of_5(self, player_1: Player, player_2: Player, score_manager: ScoreManager):
+        """
+        Play a best of 5 series between two players.
+        
+        Args:
+            player_1: The first player
+            player_2: The second player
+            score_manager: The score manager to use for tracking scores
+        """
+        # Create a new score manager for each best-of-5 series to start with fresh scores
+        temp_score_manager = ScoreManagerFactory.create_score_manager(
+            self.SCORE_MANAGER_TYPE,
+            self,
+            player_1.get_name(),
+            player_2.get_name()
+        )
+        
+        round_number = 1
+        player1_wins = 0
+        player2_wins = 0
+        
+        # Best of 5 means first to 3 wins
+        while round_number <= self.BEST_OF_5 and player1_wins < 3 and player2_wins < 3:
+            self.output_provider.output_round_number(round_number, self.BEST_OF_5)
+            
+            # Get moves from players with time limit
+            player_1_move = player_1.make_move()
+            player_2_move = player_2.make_move()
+            
+            # Handle timeout cases
+            if player_1_move is None and player_2_move is None:
+                # Both players timed out, round is a draw
+                print("\nBoth players took too long to respond. Round is a draw!")
+                continue
+            elif player_1_move is None:
+                # Player 1 timed out, Player 2 wins
+                print(f"\n{player_1.get_name()} took too long to respond. {player_2.get_name()} wins this round!")
+                temp_score_manager.update_scores_for_round(-1)  # Player 2 wins
+                player2_wins += 1
+                temp_score_manager.return_leaderboard()
+                round_number += 1
+                continue
+            elif player_2_move is None:
+                # Player 2 timed out, Player 1 wins
+                print(f"\n{player_2.get_name()} took too long to respond. {player_1.get_name()} wins this round!")
+                temp_score_manager.update_scores_for_round(1)  # Player 1 wins
+                player1_wins += 1
+                temp_score_manager.return_leaderboard()
+                round_number += 1
+                continue
+
+            # Normal case - both players made valid moves
+            self.output_provider.output_round_moves(player_1, player_2, player_1_move, player_2_move)
+            
+            # Use the rules object for interaction description
+            interaction_description = self.rules.get_interaction_description(player_1_move, player_2_move)
+            self.output_provider.output_round_description(interaction_description)
+
+            # Use the rules object to determine the result
+            round_result = self.rules.determine_result(player_1_move, player_2_move)
+            temp_score_manager.update_scores_for_round(round_result)
+            
+            # Update win counters for early termination check
+            if round_result == 1:
+                player1_wins += 1
+            elif round_result == -1:
+                player2_wins += 1
+                
+            temp_score_manager.return_leaderboard()
+            round_number += 1
+            
+        # Provide feedback about best-of-5 result
+        if player1_wins >= 3:
+            print(f"\n{player_1.get_name()} wins the Best of 5 series!")
+        elif player2_wins >= 3:
+            print(f"\n{player_2.get_name()} wins the Best of 5 series!")
+            
+        # Update the main score manager with the final result
+        if player1_wins > player2_wins:
+            score_manager.update_scores_for_round(1)  # Player 1 wins the series
+        elif player2_wins > player1_wins:
+            score_manager.update_scores_for_round(-1)  # Player 2 wins the series
 
     def play_rounds(self, rounds_in_game: int, player_1: Player, player_2: Player, score_manager: ScoreManager):
         """
@@ -87,6 +178,14 @@ class GamePaperScissorsRock(Game):
             player_2: The second player
             score_manager: The score manager to use for tracking scores
         """
+        # Create a new score manager for this game to start with fresh scores
+        temp_score_manager = ScoreManagerFactory.create_score_manager(
+            self.SCORE_MANAGER_TYPE,
+            self,
+            player_1.get_name(),
+            player_2.get_name()
+        )
+        
         for round_number in range(1, int(rounds_in_game) + 1):
             self.output_provider.output_round_number(round_number, rounds_in_game)
             
@@ -102,14 +201,14 @@ class GamePaperScissorsRock(Game):
             elif player_1_move is None:
                 # Player 1 timed out, Player 2 wins
                 print(f"\n{player_1.get_name()} took too long to respond. {player_2.get_name()} wins this round!")
-                score_manager.update_scores_for_round(-1)  # Player 2 wins
-                score_manager.return_leaderboard()
+                temp_score_manager.update_scores_for_round(-1)  # Player 2 wins
+                temp_score_manager.return_leaderboard()
                 continue
             elif player_2_move is None:
                 # Player 2 timed out, Player 1 wins
                 print(f"\n{player_2.get_name()} took too long to respond. {player_1.get_name()} wins this round!")
-                score_manager.update_scores_for_round(1)  # Player 1 wins
-                score_manager.return_leaderboard()
+                temp_score_manager.update_scores_for_round(1)  # Player 1 wins
+                temp_score_manager.return_leaderboard()
                 continue
 
             # Normal case - both players made valid moves
@@ -121,14 +220,40 @@ class GamePaperScissorsRock(Game):
 
             # Use the rules object to determine the result
             round_result = self.rules.determine_result(player_1_move, player_2_move)
-            score_manager.update_scores_for_round(round_result)
-            score_manager.return_leaderboard()
+            temp_score_manager.update_scores_for_round(round_result)
+            temp_score_manager.return_leaderboard()
+            
+        # Update the main score manager based on the final game result
+        if temp_score_manager._scores[player_1.get_name()] > temp_score_manager._scores[player_2.get_name()]:
+            score_manager.update_scores_for_round(1)  # Player 1 wins overall
+        elif temp_score_manager._scores[player_2.get_name()] > temp_score_manager._scores[player_1.get_name()]:
+            score_manager.update_scores_for_round(-1)  # Player 2 wins overall
+        else:
+            # It's a draw
+            score_manager.update_scores_for_round(0)
 
-    def request_rounds_to_play(self) -> int:
-        rounds_to_play = self.input_provider.rounds_of_game_request(GamePaperScissorsRock.MAX_ROUNDS)
-        while not self.is_valid_rounds(rounds_to_play):
-            rounds_to_play = self.input_provider.rounds_of_game_request(GamePaperScissorsRock.MAX_ROUNDS)
-        return int(rounds_to_play)
+    def request_game_option(self) -> str:
+        """
+        Request the game option from the user, which can be either a number of rounds
+        or 'bo5' for "Best of 5" mode.
+        
+        Returns:
+            str: Either a number of rounds to play (as a string) or "bo5"
+        """
+        prompt = f"Enter number of rounds to play (1-{self.MAX_ROUNDS}) or 'bo5' for Best of 5 mode: "
+        game_option = input(prompt).strip().lower()
+        
+        # Check if it's the Best of 5 option
+        if game_option == "bo5":
+            return game_option
+            
+        # Otherwise validate as regular rounds input
+        while not self.is_valid_rounds(game_option):
+            game_option = input(prompt).strip().lower()
+            if game_option == "bo5":
+                return game_option
+                
+        return game_option
 
     def is_valid_rounds(self, rounds_to_play: str) -> bool:
         """Helper method to validate the rounds input."""
