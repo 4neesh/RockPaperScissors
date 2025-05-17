@@ -16,7 +16,18 @@ class InputProvider(ABC):
         pass
 
     @abstractmethod
-    def player_rps_request(self, player_id: int, choices: str) -> str:
+    def player_rps_request(self, player_id: int, choices: str, time_limit: int = None) -> str:
+        """
+        Request a player's move in the rock-paper-scissors game.
+        
+        Args:
+            player_id: The ID of the player making the move
+            choices: The available choices for the player
+            time_limit: Optional time limit in seconds for making the move
+            
+        Returns:
+            The player's move as a string, or None/empty string if timed out
+        """
         pass
 
     @abstractmethod

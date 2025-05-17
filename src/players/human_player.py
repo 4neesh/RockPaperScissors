@@ -1,4 +1,3 @@
-
 from src.game_utils.hand_gesture import HandGesture
 from src.players.player import Player
 from game import Game
@@ -10,14 +9,14 @@ class HumanPlayer(Player):
     The player provides their name and makes moves interactively.
     """
     
-    def __init__(self, game: Game, player_id: int):
+    def __init__(self, game: Game, player_id: int, time_limit: int = Player.DEFAULT_TIME_LIMIT):
         input_name = ""
         while Player.name_is_invalid(input_name):
             input_name = game.input_provider.player_name_request(player_id)
             if Player.name_is_invalid(input_name):
                 game.output_provider.output_name_error()
 
-        super().__init__(input_name)
+        super().__init__(input_name, time_limit)
         self._game = game
         self._id = player_id
 
@@ -25,11 +24,28 @@ class HumanPlayer(Player):
         """
         Prompts the player to make a move in the Paper, Scissors, Rock game.
         Continuously requests a valid move from the player until a valid input is provided.
+        If no valid move is made within the time limit, returns None to indicate forfeit.
         """
         gesture_options = ", ".join(HandGesture.choices())
-        input_gesture = self._game.input_provider.player_rps_request(self._id, gesture_options)
+        
+        # Request input with time limit
+        input_gesture = self._game.input_provider.player_rps_request(
+            self._id, gesture_options, self.time_limit
+        )
+        
+        # Check for timeout (indicated by None or empty string)
+        if input_gesture is None or input_gesture == "":
+            return None
+            
+        # Continue requesting input until valid
         while not self.is_valid_move(input_gesture):
-            input_gesture = self._game.input_provider.player_rps_request(self._id, gesture_options)
+            input_gesture = self._game.input_provider.player_rps_request(
+                self._id, gesture_options, self.time_limit
+            )
+            # Check for timeout again
+            if input_gesture is None or input_gesture == "":
+                return None
+                
         if input_gesture.isdigit():
             gesture_number = int(input_gesture)
             return HandGesture.get_gesture_by_number(gesture_number)
