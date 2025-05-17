@@ -39,7 +39,6 @@ class HumanPlayer(Player):
             
         # Continue requesting input until valid
         while not self.is_valid_move(input_gesture):
-            # For invalid inputs, we'll reset the timer for another attempt
             input_gesture = self._game.input_provider.player_rps_request(
                 self._id, gesture_options, self.time_limit
             )
