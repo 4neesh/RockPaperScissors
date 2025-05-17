@@ -1,6 +1,8 @@
 import signal
+import threading
 from src.game_utils.game_mode import GameMode
 from src.io_utils.input_provider import InputProvider
+from src.io_utils.countdown_timer import CountdownTimer
 
 
 class TimeoutException(Exception):
@@ -39,32 +41,41 @@ class InputProviderConsole(InputProvider):
         Returns:
             The player's input, or an empty string if timed out
         """
-        prompt = f"Player {player_id}: Enter your move ({choices}), or enter 'e' to exit the game"
-        if time_limit:
-            prompt += f" - You have {time_limit} seconds to respond"
-        prompt += "\n"
+        prompt = f"Player {player_id}: Enter your move ({choices}), or enter 'e' to exit the game\n"
         
         # If no time limit, just use regular input
         if not time_limit:
             return input(prompt).strip()
-            
+        
+        # Print the prompt first
+        print(prompt, end="")
+        
+        # Create and start the countdown timer
+        timer = CountdownTimer(time_limit)
+        timer.start()
+        
         # Set up the timeout handler
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(time_limit)
         
         try:
-            user_input = input(prompt).strip()
+            user_input = input("")  # No prompt, as we've already printed it
             # Cancel the alarm if input received
             signal.alarm(0)
-            return user_input
+            # Stop the timer
+            timer.stop()
+            print()  # Print a newline to move past the timer line
+            return user_input.strip()
         except TimeoutException:
             # If timeout occurred, return empty string
-            print(f"\nTime's up!")
+            timer.stop()
+            print("\nTime's up!")
             signal.alarm(0)  # Cancel the alarm
             return ""
         finally:
-            # Ensure alarm is canceled
+            # Ensure alarm is canceled and timer is stopped
             signal.alarm(0)
+            timer.stop()
 
     def rounds_of_game_request(self, max_rounds: int) -> str:
         return input(f"How many rounds of Rock, Paper, Scissors would you like to play? (Max: {max_rounds}) \n").strip()
