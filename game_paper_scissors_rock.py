@@ -32,6 +32,7 @@ class GamePaperScissorsRock(Game):
     GAME_TYPE = "rps"
     SCORE_MANAGER_TYPE = "standard"
     MOVE_TIME_LIMIT = 10  # Time limit in seconds for each move
+    BEST_OF_5_ROUNDS = 5  # Number of rounds in "Best of 5" mode
 
     @classmethod
     def register(cls):
@@ -49,38 +50,121 @@ class GamePaperScissorsRock(Game):
         self.output_provider.introduce_game("Paper Scissors Rock")
         game_mode = self.select_game_mode()
         players = game_mode.initialise_players_in_game(self)
-        
+
         # Create a score manager using the factory
         score_manager = ScoreManagerFactory.create_score_manager(
-            self.SCORE_MANAGER_TYPE, 
-            self, 
-            players[0].get_name(), 
+            self.SCORE_MANAGER_TYPE,
+            self,
+            players[0].get_name(),
             players[1].get_name()
         )
-        
+
         self.play_game(players, score_manager)
 
     def play_game(self, players: [Player, Player], score_manager: ScoreManager):
         """
         Play a game with the specified players and score manager.
-        
+
         Args:
             players: A list of two players (player 1 and player 2)
             score_manager: The score manager to use for tracking scores
         """
         replay = "y"
         while replay.lower() == "y":
-            rounds_to_play = self.request_rounds_to_play()
-            self.play_rounds(rounds_to_play, players[0], players[1], score_manager)
-            
+            # Ask if the player wants to play Best of 5 mode
+            best_of_5 = self.input_provider.play_again_request().lower() == "b"
+
+            if best_of_5:
+                self.output_provider.output_round_number(0, self.BEST_OF_5_ROUNDS)
+                self.play_best_of_5(players[0], players[1], score_manager)
+            else:
+                rounds_to_play = self.request_rounds_to_play()
+                self.play_rounds(rounds_to_play, players[0], players[1], score_manager)
+
             score_manager.return_game_result()
             replay = self.input_provider.play_again_request()
         self.exit_game()
 
+    def play_best_of_5(self, player_1: Player, player_2: Player, score_manager: ScoreManager):
+        """
+        Play a Best of 5 match between two players.
+
+        Args:
+            player_1: The first player
+            player_2: The second player
+            score_manager: The score manager to use for tracking scores
+        """
+        # Reset scores for the new match
+        player_1_wins = 0
+        player_2_wins = 0
+        round_number = 1
+
+        # Play until one player reaches 3 wins
+        while player_1_wins < 3 and player_2_wins < 3 and round_number <= self.BEST_OF_5_ROUNDS:
+            self.output_provider.output_round_number(round_number, self.BEST_OF_5_ROUNDS)
+
+            # Get moves from players with time limit
+            player_1_move = player_1.make_move()
+            player_2_move = player_2.make_move()
+
+            # Handle timeout cases
+            if player_1_move is None and player_2_move is None:
+                # Both players timed out, round is a draw
+                print("\nBoth players took too long to respond. Round is a draw!")
+                round_number += 1
+                continue
+            elif player_1_move is None:
+                # Player 1 timed out, Player 2 wins
+                print(f"\n{player_1.get_name()} took too long to respond. {player_2.get_name()} wins this round!")
+                score_manager.update_scores_for_round(-1)  # Player 2 wins
+                player_2_wins += 1
+                score_manager.return_leaderboard()
+                round_number += 1
+                continue
+            elif player_2_move is None:
+                # Player 2 timed out, Player 1 wins
+                print(f"\n{player_2.get_name()} took too long to respond. {player_1.get_name()} wins this round!")
+                score_manager.update_scores_for_round(1)  # Player 1 wins
+                player_1_wins += 1
+                score_manager.return_leaderboard()
+                round_number += 1
+                continue
+
+            # Normal case - both players made valid moves
+            self.output_provider.output_round_moves(player_1, player_2, player_1_move, player_2_move)
+
+            # Use the rules object for interaction description
+            interaction_description = self.rules.get_interaction_description(player_1_move, player_2_move)
+            self.output_provider.output_round_description(interaction_description)
+
+            # Use the rules object to determine the result
+            round_result = self.rules.determine_result(player_1_move, player_2_move)
+            score_manager.update_scores_for_round(round_result)
+
+            # Update win counters for Best of 5
+            if round_result == 1:
+                player_1_wins += 1
+            elif round_result == -1:
+                player_2_wins += 1
+
+            # Display current score and Best of 5 progress
+            score_manager.return_leaderboard()
+            print(f"Best of 5 progress: {player_1.get_name()} {player_1_wins} - {player_2_wins} {player_2.get_name()}")
+
+            round_number += 1
+
+        # Announce the Best of 5 winner
+        if player_1_wins > player_2_wins:
+            print(f"\n{player_1.get_name()} wins the Best of 5 match with {player_1_wins} wins to {player_2_wins}!")
+        elif player_2_wins > player_1_wins:
+            print(f"\n{player_2.get_name()} wins the Best of 5 match with {player_2_wins} wins to {player_1_wins}!")
+        else:
+            print(f"\nThe Best of 5 match ends in a draw with {player_1_wins} wins each!")
+
     def play_rounds(self, rounds_in_game: int, player_1: Player, player_2: Player, score_manager: ScoreManager):
         """
         Play a specified number of rounds between two players.
-        
+
         Args:
             rounds_in_game: The number of rounds to play
             player_1: The first player
@@ -89,11 +173,11 @@ class GamePaperScissorsRock(Game):
         """
         for round_number in range(1, int(rounds_in_game) + 1):
             self.output_provider.output_round_number(round_number, rounds_in_game)
-            
+
             # Get moves from players with time limit
             player_1_move = player_1.make_move()
             player_2_move = player_2.make_move()
-            
+
             # Handle timeout cases
             if player_1_move is None and player_2_move is None:
                 # Both players timed out, round is a draw
@@ -114,7 +198,7 @@ class GamePaperScissorsRock(Game):
 
             # Normal case - both players made valid moves
             self.output_provider.output_round_moves(player_1, player_2, player_1_move, player_2_move)
-            
+
             # Use the rules object for interaction description
             interaction_description = self.rules.get_interaction_description(player_1_move, player_2_move)
             self.output_provider.output_round_description(interaction_description)
