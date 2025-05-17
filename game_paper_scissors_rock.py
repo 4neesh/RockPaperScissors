@@ -49,30 +49,32 @@ class GamePaperScissorsRock(Game):
         self.output_provider.introduce_game("Paper Scissors Rock")
         game_mode = self.select_game_mode()
         players = game_mode.initialise_players_in_game(self)
-        
+
         # Create a score manager using the factory
         score_manager = ScoreManagerFactory.create_score_manager(
-            self.SCORE_MANAGER_TYPE, 
-            self, 
-            players[0].get_name(), 
+            self.SCORE_MANAGER_TYPE,
+            self,
+            players[0].get_name(),
             players[1].get_name()
         )
-        
+
         self.play_game(players, score_manager)
 
     def play_game(self, players: [Player, Player], score_manager: ScoreManager):
         """
         Play a game with the specified players and score manager.
-        
+
         Args:
             players: A list of two players (player 1 and player 2)
             score_manager: The score manager to use for tracking scores
         """
         replay = "y"
         while replay.lower() == "y":
-            rounds_to_play = self.request_rounds_to_play()
+            # Check if user wants Best of 5 mode
+            is_best_of_five = self.select_best_of_five()
+            rounds_to_play = 5 if is_best_of_five else self.request_rounds_to_play()
             self.play_rounds(rounds_to_play, players[0], players[1], score_manager)
-            
+
             score_manager.return_game_result()
             replay = self.input_provider.play_again_request()
         self.exit_game()
@@ -150,6 +152,11 @@ class GamePaperScissorsRock(Game):
                     self.output_provider.output_game_mode_error()
             else:
                 self.output_provider.output_game_mode_error()
+
+    def select_best_of_five(self) -> bool:
+        """Prompt user to select Best of 5 mode."""
+        response = self.input_provider.play_again_request().lower()  # Reusing play_again_request for simplicity
+        return response == "y"
 
     def exit_game(self):
         self.output_provider.output_end_game()
