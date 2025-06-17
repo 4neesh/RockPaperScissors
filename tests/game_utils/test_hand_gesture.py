@@ -1,6 +1,7 @@
 import unittest
 
-from src.game_utils.hand_gesture import HandGesture, GestureRules
+from src.game_utils.hand_gesture import HandGesture
+from src.game_utils.rps_rules import RPSRules
 
 
 class TestHandGesture(unittest.TestCase):
@@ -14,15 +15,17 @@ class TestHandGesture(unittest.TestCase):
 class TestGestureRules(unittest.TestCase):
 
     def test_determine_result(self):
-        self.assertEqual(GestureRules.determine_result(HandGesture.ROCK, HandGesture.SCISSORS), 1)
-        self.assertEqual(GestureRules.determine_result(HandGesture.PAPER, HandGesture.ROCK), 1)
-        self.assertEqual(GestureRules.determine_result(HandGesture.SCISSORS, HandGesture.PAPER), 1)
-        self.assertEqual(GestureRules.determine_result(HandGesture.ROCK, HandGesture.ROCK), 0)
-        self.assertEqual(GestureRules.determine_result(HandGesture.PAPER, HandGesture.SCISSORS), -1)
+        rps = RPSRules()
+        self.assertEqual(rps.determine_result(HandGesture.ROCK, HandGesture.SCISSORS), 1)
+        self.assertEqual(rps.determine_result(HandGesture.PAPER, HandGesture.ROCK), 1)
+        self.assertEqual(rps.determine_result(HandGesture.SCISSORS, HandGesture.PAPER), 1)
+        self.assertEqual(rps.determine_result(HandGesture.ROCK, HandGesture.ROCK), 0)
+        self.assertEqual(rps.determine_result(HandGesture.PAPER, HandGesture.SCISSORS), -1)
 
     def test_get_interaction_description(self):
-        self.assertEqual(GestureRules.get_interaction_description(HandGesture.ROCK, HandGesture.SCISSORS), "Rock blunts Scissors")
-        self.assertEqual(GestureRules.get_interaction_description(HandGesture.PAPER, HandGesture.ROCK), "Paper wraps Rock")
-        self.assertEqual(GestureRules.get_interaction_description(HandGesture.SCISSORS, HandGesture.PAPER), "Scissors cuts Paper")
-        self.assertEqual(GestureRules.get_interaction_description(HandGesture.ROCK, HandGesture.ROCK), "Rock vs Rock is a draw")
-        self.assertEqual(GestureRules.get_interaction_description(HandGesture.PAPER, HandGesture.PAPER), "Paper vs Paper is a draw")
+        rps = RPSRules()
+        self.assertEqual(rps.get_interaction_description(HandGesture.ROCK, HandGesture.SCISSORS), "Rock blunts Scissors")
+        self.assertEqual(rps.get_interaction_description(HandGesture.PAPER, HandGesture.ROCK), "Paper wraps Rock")
+        self.assertEqual(rps.get_interaction_description(HandGesture.SCISSORS, HandGesture.PAPER), "Scissors cuts Paper")
+        self.assertEqual(rps.get_interaction_description(HandGesture.ROCK, HandGesture.ROCK), "Rock vs Rock is a draw")
+        self.assertEqual(rps.get_interaction_description(HandGesture.PAPER, HandGesture.PAPER), "Paper vs Paper is a draw")
