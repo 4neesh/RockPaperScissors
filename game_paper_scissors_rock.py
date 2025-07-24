@@ -118,6 +118,7 @@ class GamePaperScissorsRock(Game):
             if player_1_move is None and player_2_move is None:
                 # Both players timed out, round is a draw
                 print("\nBoth players took too long to respond. Round is a draw!")
+                temp_score_manager.update_scores_for_round(0)  # Player 2 wins
                 continue
             elif player_1_move is None:
                 # Player 1 timed out, Player 2 wins
@@ -161,12 +162,7 @@ class GamePaperScissorsRock(Game):
             print(f"\n{player_1.get_name()} wins the Best of 5 series!")
         elif player2_wins >= 3:
             print(f"\n{player_2.get_name()} wins the Best of 5 series!")
-            
-        # Update the main score manager with the final result
-        if player1_wins > player2_wins:
-            score_manager.update_scores_for_round(1)  # Player 1 wins the series
-        elif player2_wins > player1_wins:
-            score_manager.update_scores_for_round(-1)  # Player 2 wins the series
+        score_manager._scores = temp_score_manager._scores
 
     def play_rounds(self, rounds_in_game: int, player_1: Player, player_2: Player, score_manager: ScoreManager):
         """
